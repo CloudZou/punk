@@ -7,3 +7,5 @@
 # 3. build tool
    ```bazel build-tool```
    all binary file in bazel-bin
+   
+Copy punk tool binary to the directory $GOPATH/bin 
