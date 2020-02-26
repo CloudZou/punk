@@ -1,0 +1,30 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "config.go",
+        "zipkin.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/net/trace/zipkin",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/conf/env:go_default_library",
+        "//pkg/net/trace:go_default_library",
+        "//pkg/net/trace/proto:go_default_library",
+        "//pkg/time:go_default_library",
+        "//vendor/github.com/openzipkin/zipkin-go/model:go_default_library",
+        "//vendor/github.com/openzipkin/zipkin-go/reporter:go_default_library",
+        "//vendor/github.com/openzipkin/zipkin-go/reporter/http:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["zipkin_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/net/trace:go_default_library",
+        "//pkg/time:go_default_library",
+    ],
+)

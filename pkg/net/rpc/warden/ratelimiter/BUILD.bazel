@@ -1,0 +1,15 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["ratelimiter.go"],
+    importpath = "github.com/CloudZou/punk/pkg/net/rpc/warden/ratelimiter",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/log:go_default_library",
+        "//pkg/ratelimit:go_default_library",
+        "//pkg/ratelimit/bbr:go_default_library",
+        "//pkg/stat/metric:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
+    ],
+)

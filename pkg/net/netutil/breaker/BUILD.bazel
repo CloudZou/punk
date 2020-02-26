@@ -1,0 +1,32 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "breaker.go",
+        "sre_breaker.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/net/netutil/breaker",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/ecode:go_default_library",
+        "//pkg/log:go_default_library",
+        "//pkg/stat/metric:go_default_library",
+        "//pkg/time:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "breaker_test.go",
+        "example_test.go",
+        "sre_breaker_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/stat/metric:go_default_library",
+        "//pkg/time:go_default_library",
+        "//vendor/github.com/stretchr/testify/assert:go_default_library",
+    ],
+)

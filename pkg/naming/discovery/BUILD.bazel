@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["discovery.go"],
+    importpath = "github.com/CloudZou/punk/pkg/naming/discovery",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/conf/env:go_default_library",
+        "//pkg/ecode:go_default_library",
+        "//pkg/log:go_default_library",
+        "//pkg/naming:go_default_library",
+        "//pkg/net/http/blademaster:go_default_library",
+        "//pkg/time:go_default_library",
+    ],
+)

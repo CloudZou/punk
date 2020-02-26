@@ -1,0 +1,28 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["mockdiscovery.go"],
+    importpath = "github.com/CloudZou/punk/pkg/net/rpc/warden/resolver/test",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/conf/env:go_default_library",
+        "//pkg/naming:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["resovler_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/conf/env:go_default_library",
+        "//pkg/naming:go_default_library",
+        "//pkg/net/netutil/breaker:go_default_library",
+        "//pkg/net/rpc/warden:go_default_library",
+        "//pkg/net/rpc/warden/internal/proto/testproto:go_default_library",
+        "//pkg/net/rpc/warden/resolver:go_default_library",
+        "//pkg/time:go_default_library",
+        "//vendor/github.com/stretchr/testify/assert:go_default_library",
+    ],
+)

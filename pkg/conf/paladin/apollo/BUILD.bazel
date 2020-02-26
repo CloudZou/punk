@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "apollo.go",
+        "const.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/conf/paladin/apollo",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/conf/paladin:go_default_library",
+        "//vendor/github.com/philchia/agollo:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["apollo_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//pkg/conf/paladin/apollo/internal/mockserver:go_default_library"],
+)

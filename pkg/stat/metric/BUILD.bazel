@@ -1,0 +1,38 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "counter.go",
+        "gauge.go",
+        "histogram.go",
+        "iterator.go",
+        "metric.go",
+        "point_gauge.go",
+        "point_policy.go",
+        "reduce.go",
+        "rolling_counter.go",
+        "rolling_gauge.go",
+        "rolling_policy.go",
+        "window.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/stat/metric",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/github.com/prometheus/client_golang/prometheus:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "counter_test.go",
+        "gauge_test.go",
+        "point_gauge_test.go",
+        "reduce_test.go",
+        "rolling_counter_test.go",
+        "rolling_gauge_test.go",
+        "rolling_policy_test.go",
+        "window_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = ["//vendor/github.com/stretchr/testify/assert:go_default_library"],
+)

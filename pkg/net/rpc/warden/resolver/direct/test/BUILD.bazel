@@ -1,0 +1,14 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_test")
+
+go_test(
+    name = "go_default_test",
+    srcs = ["direct_test.go"],
+    deps = [
+        "//pkg/net/netutil/breaker:go_default_library",
+        "//pkg/net/rpc/warden:go_default_library",
+        "//pkg/net/rpc/warden/internal/proto/testproto:go_default_library",
+        "//pkg/net/rpc/warden/resolver:go_default_library",
+        "//pkg/net/rpc/warden/resolver/direct:go_default_library",
+        "//pkg/time:go_default_library",
+    ],
+)

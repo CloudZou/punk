@@ -1,0 +1,12 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["packed-packr.go"],
+    importpath = "github.com/CloudZou/punk/tool/punk-gen-project/packrd",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/gobuffalo/packr/v2:go_default_library",
+        "//vendor/github.com/gobuffalo/packr/v2/file/resolver:go_default_library",
+    ],
+)

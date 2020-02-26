@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "naming.go",
+        "opt.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/naming",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/conf/env:go_default_library",
+        "//pkg/log:go_default_library",
+        "//vendor/github.com/dgryski/go-farm:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["opt_test.go"],
+    embed = [":go_default_library"],
+)

@@ -1,0 +1,24 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "dsn.go",
+        "query.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/conf/dsn",
+    visibility = ["//visibility:public"],
+    deps = ["//vendor/gopkg.in/go-playground/validator.v9:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "dsn_test.go",
+        "example_test.go",
+        "query_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = ["//pkg/time:go_default_library"],
+)

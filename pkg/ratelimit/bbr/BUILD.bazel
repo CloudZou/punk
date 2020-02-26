@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["bbr.go"],
+    importpath = "github.com/CloudZou/punk/pkg/ratelimit/bbr",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/container/group:go_default_library",
+        "//pkg/ecode:go_default_library",
+        "//pkg/log:go_default_library",
+        "//pkg/ratelimit:go_default_library",
+        "//pkg/stat/metric:go_default_library",
+        "//pkg/stat/sys/cpu:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["bbr_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/ratelimit:go_default_library",
+        "//pkg/stat/metric:go_default_library",
+        "//vendor/github.com/stretchr/testify/assert:go_default_library",
+    ],
+)

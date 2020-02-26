@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "filewriter.go",
+        "option.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/log/internal/filewriter",
+    visibility = ["//pkg/log:__subpackages__"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["filewriter_test.go"],
+    embed = [":go_default_library"],
+    deps = ["//vendor/github.com/stretchr/testify/assert:go_default_library"],
+)

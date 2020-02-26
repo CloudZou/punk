@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "resolver.go",
+        "util.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/net/rpc/warden/resolver",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/conf/env:go_default_library",
+        "//pkg/log:go_default_library",
+        "//pkg/naming:go_default_library",
+        "//pkg/net/rpc/warden/internal/metadata:go_default_library",
+        "//vendor/github.com/pkg/errors:go_default_library",
+        "//vendor/google.golang.org/grpc/resolver:go_default_library",
+    ],
+)

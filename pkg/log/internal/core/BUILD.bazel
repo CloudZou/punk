@@ -1,0 +1,26 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "buffer.go",
+        "bufferpool.go",
+        "encoder.go",
+        "field.go",
+        "json_encoder.go",
+        "pool.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/log/internal/core",
+    visibility = ["//pkg/log:__subpackages__"],
+    deps = ["//pkg/time:go_default_library"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "buffer_test.go",
+        "pool_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = ["//vendor/github.com/stretchr/testify/assert:go_default_library"],
+)

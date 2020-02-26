@@ -1,0 +1,43 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "client.go",
+        "default.go",
+        "driver.go",
+        "file.go",
+        "helper.go",
+        "map.go",
+        "mock.go",
+        "register.go",
+        "toml.go",
+        "value.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/conf/paladin",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//vendor/github.com/BurntSushi/toml:go_default_library",
+        "//vendor/github.com/fsnotify/fsnotify:go_default_library",
+        "//vendor/github.com/pkg/errors:go_default_library",
+        "//vendor/gopkg.in/yaml.v2:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "example_test.go",
+        "file_test.go",
+        "helper_test.go",
+        "map_test.go",
+        "mock_test.go",
+        "value_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/conf/paladin/apollo:go_default_library",
+        "//vendor/github.com/BurntSushi/toml:go_default_library",
+        "//vendor/github.com/stretchr/testify/assert:go_default_library",
+    ],
+)

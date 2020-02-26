@@ -1,0 +1,56 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "config.go",
+        "const.go",
+        "context.go",
+        "dapper.go",
+        "marshal.go",
+        "noop.go",
+        "option.go",
+        "propagation.go",
+        "report.go",
+        "sample.go",
+        "span.go",
+        "tag.go",
+        "tracer.go",
+        "util.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/net/trace",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/conf/dsn:go_default_library",
+        "//pkg/conf/env:go_default_library",
+        "//pkg/net/ip:go_default_library",
+        "//pkg/net/trace/proto:go_default_library",
+        "//pkg/time:go_default_library",
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/github.com/golang/protobuf/ptypes/duration:go_default_library",
+        "//vendor/github.com/golang/protobuf/ptypes/timestamp:go_default_library",
+        "//vendor/github.com/pkg/errors:go_default_library",
+        "//vendor/google.golang.org/grpc/metadata:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "config_test.go",
+        "context_test.go",
+        "dapper_test.go",
+        "marshal_test.go",
+        "report_test.go",
+        "sample_test.go",
+        "span_test.go",
+        "tag_test.go",
+        "util_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//vendor/github.com/pkg/errors:go_default_library",
+        "//vendor/github.com/stretchr/testify/assert:go_default_library",
+        "//vendor/google.golang.org/grpc/metadata:go_default_library",
+    ],
+)

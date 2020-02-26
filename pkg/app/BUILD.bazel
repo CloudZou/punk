@@ -1,0 +1,18 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "form.go",
+        "request.go",
+        "response.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/app",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/ecode:go_default_library",
+        "//pkg/log:go_default_library",
+        "//pkg/net/http/blademaster:go_default_library",
+        "//vendor/github.com/astaxie/beego/validation:go_default_library",
+    ],
+)
