@@ -1,7 +1,6 @@
 package errgroup
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -9,6 +8,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
 type ABC struct {
@@ -24,11 +25,11 @@ func TestNormal(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		abcs[i] = &ABC{CBA: i}
 	}
-	g.Go(func(context.Context) (err error) {
+	g.Go(func() (err error) {
 		abcs[1].CBA++
 		return
 	})
-	g.Go(func(context.Context) (err error) {
+	g.Go(func() (err error) {
 		abcs[2].CBA++
 		return
 	})
@@ -38,7 +39,7 @@ func TestNormal(t *testing.T) {
 	t.Log(abcs)
 }
 
-func sleep1s(context.Context) error {
+func sleep1s() error {
 	time.Sleep(time.Second)
 	return nil
 }
@@ -71,12 +72,12 @@ func TestGOMAXPROCS(t *testing.T) {
 	}
 	// context canceled
 	var canceled bool
-	g3 := WithCancel(context.Background())
+	g3, ctx := WithContext(context.Background())
 	g3.GOMAXPROCS(2)
-	g3.Go(func(context.Context) error {
+	g3.Go(func() error {
 		return fmt.Errorf("error for testing errgroup context")
 	})
-	g3.Go(func(ctx context.Context) error {
+	g3.Go(func() error {
 		time.Sleep(time.Second)
 		select {
 		case <-ctx.Done():
@@ -97,11 +98,11 @@ func TestRecover(t *testing.T) {
 		g    Group
 		err  error
 	)
-	g.Go(func(context.Context) (err error) {
+	g.Go(func() (err error) {
 		abcs[1].CBA++
 		return
 	})
-	g.Go(func(context.Context) (err error) {
+	g.Go(func() (err error) {
 		abcs[2].CBA++
 		return
 	})
@@ -117,7 +118,7 @@ func TestRecover2(t *testing.T) {
 		g   Group
 		err error
 	)
-	g.Go(func(context.Context) (err error) {
+	g.Go(func() (err error) {
 		panic("2233")
 	})
 	if err = g.Wait(); err != nil {
@@ -155,7 +156,7 @@ func ExampleGroup_justErrors() {
 	for _, url := range urls {
 		// Launch a goroutine to fetch the URL.
 		url := url // https://golang.org/doc/faq#closures_and_goroutines
-		g.Go(func(context.Context) error {
+		g.Go(func() error {
 			// Fetch the URL.
 			resp, err := http.Get(url)
 			if err == nil {
@@ -176,13 +177,13 @@ func ExampleGroup_justErrors() {
 // and error-handling.
 func ExampleGroup_parallel() {
 	Google := func(ctx context.Context, query string) ([]Result, error) {
-		g := WithContext(ctx)
+		g, ctx := WithContext(ctx)
 
 		searches := []Search{Web, Image, Video}
 		results := make([]Result, len(searches))
 		for i, search := range searches {
 			i, search := i, search // https://golang.org/doc/faq#closures_and_goroutines
-			g.Go(func(context.Context) error {
+			g.Go(func() error {
 				result, err := search(ctx, query)
 				if err == nil {
 					results[i] = result
@@ -231,7 +232,7 @@ func TestZeroGroup(t *testing.T) {
 		var firstErr error
 		for i, err := range tc.errs {
 			err := err
-			g.Go(func(context.Context) error { return err })
+			g.Go(func() error { return err })
 
 			if firstErr == nil && err != nil {
 				firstErr = err
@@ -245,22 +246,43 @@ func TestZeroGroup(t *testing.T) {
 	}
 }
 
-func TestWithCancel(t *testing.T) {
-	g := WithCancel(context.Background())
-	g.Go(func(ctx context.Context) error {
-		time.Sleep(100 * time.Millisecond)
-		return fmt.Errorf("boom")
-	})
-	var doneErr error
-	g.Go(func(ctx context.Context) error {
+func TestWithContext(t *testing.T) {
+	errDoom := errors.New("group_test: doomed")
+
+	cases := []struct {
+		errs []error
+		want error
+	}{
+		{want: nil},
+		{errs: []error{nil}, want: nil},
+		{errs: []error{errDoom}, want: errDoom},
+		{errs: []error{errDoom, nil}, want: errDoom},
+	}
+
+	for _, tc := range cases {
+		g, ctx := WithContext(context.Background())
+
+		for _, err := range tc.errs {
+			err := err
+			g.Go(func() error { return err })
+		}
+
+		if err := g.Wait(); err != tc.want {
+			t.Errorf("after %T.Go(func() error { return err }) for err in %v\n"+
+				"g.Wait() = %v; want %v",
+				g, tc.errs, err, tc.want)
+		}
+
+		canceled := false
 		select {
 		case <-ctx.Done():
-			doneErr = ctx.Err()
+			canceled = true
+		default:
 		}
-		return doneErr
-	})
-	g.Wait()
-	if doneErr != context.Canceled {
-		t.Error("error should be Canceled")
+		if !canceled {
+			t.Errorf("after %T.Go(func() error { return err }) for err in %v\n"+
+				"ctx.Done() was not closed",
+				g, tc.errs)
+		}
 	}
 }

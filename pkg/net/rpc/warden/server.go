@@ -13,21 +13,23 @@ import (
 	"github.com/CloudZou/punk/pkg/conf/dsn"
 	"github.com/CloudZou/punk/pkg/log"
 	nmd "github.com/CloudZou/punk/pkg/net/metadata"
-	"github.com/CloudZou/punk/pkg/net/rpc/warden/ratelimiter"
 	"github.com/CloudZou/punk/pkg/net/trace"
 	xtime "github.com/CloudZou/punk/pkg/time"
-
 	//this package is for json format response
-	_ "github.com/CloudZou/punk/pkg/net/rpc/warden/internal/encoding/json"
-	"github.com/CloudZou/punk/pkg/net/rpc/warden/internal/status"
+	_ "github.com/CloudZou/punk/pkg/net/rpc/warden/encoding/json"
+	"github.com/CloudZou/punk/pkg/net/rpc/warden/status"
 
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
-	_ "google.golang.org/grpc/encoding/gzip" // NOTE: use grpc gzip by header grpc-accept-encoding
 	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
+)
+
+const (
+	_family = "grpc"
+	_noUser = "no_user"
 )
 
 var (
@@ -36,7 +38,7 @@ var (
 		Network:           "tcp",
 		Addr:              "0.0.0.0:9000",
 		Timeout:           xtime.Duration(time.Second),
-		IdleTimeout:       xtime.Duration(time.Second * 180),
+		IdleTimeout:       xtime.Duration(time.Second * 60),
 		MaxLifeTime:       xtime.Duration(time.Hour * 2),
 		ForceCloseWait:    xtime.Duration(time.Second * 20),
 		KeepAliveInterval: xtime.Duration(time.Second * 60),
@@ -66,9 +68,6 @@ type ServerConfig struct {
 	// KeepAliveTimeout  is After having pinged for keepalive check, the server waits for a duration of Timeout and if no activity is seen even after that
 	// the connection is closed.
 	KeepAliveTimeout xtime.Duration `dsn:"query.keepaliveTimeout"`
-	// LogFlag to control log behaviour. e.g. LogFlag: warden.LogFlagDisableLog.
-	// Disable: 1 DisableArgs: 2 DisableInfo: 4
-	LogFlag int8 `dsn:"query.logFlag"`
 }
 
 // Server is the framework's server side instance, it contains the GrpcServer, interceptor and interceptors.
@@ -85,8 +84,12 @@ type Server struct {
 func (s *Server) handle() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, args *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		var (
-			cancel func()
-			addr   string
+			cancel     func()
+			caller     string
+			addr       string
+			color      string
+			remote     string
+			remotePort string
 		)
 		s.mutex.RLock()
 		conf := s.conf
@@ -109,13 +112,19 @@ func (s *Server) handle() grpc.UnaryServerInterceptor {
 
 		// get grpc metadata(trace & remote_ip & color)
 		var t trace.Trace
-		cmd := nmd.MD{}
 		if gmd, ok := metadata.FromIncomingContext(ctx); ok {
 			t, _ = trace.Extract(trace.GRPCFormat, gmd)
-			for key, vals := range gmd {
-				if nmd.IsIncomingKey(key) {
-					cmd[key] = vals[0]
-				}
+			if strs, ok := gmd[nmd.Color]; ok {
+				color = strs[0]
+			}
+			if strs, ok := gmd[nmd.RemoteIP]; ok {
+				remote = strs[0]
+			}
+			if callers, ok := gmd[nmd.Caller]; ok {
+				caller = callers[0]
+			}
+			if remotePorts, ok := gmd[nmd.RemotePort]; ok {
+				remotePort = remotePorts[0]
 			}
 		}
 		if t == nil {
@@ -131,10 +140,19 @@ func (s *Server) handle() grpc.UnaryServerInterceptor {
 		defer t.Finish(&err)
 
 		// use common meta data context instead of grpc context
-		ctx = nmd.NewContext(ctx, cmd)
-		ctx = trace.NewContext(ctx, t)
+		ctx = nmd.NewContext(ctx, nmd.MD{
+			nmd.Trace:      t,
+			nmd.Color:      color,
+			nmd.RemoteIP:   remote,
+			nmd.Caller:     caller,
+			nmd.RemotePort: remotePort,
+		})
 
 		resp, err = handler(ctx, req)
+		// monitor & logging
+		if caller == "" {
+			caller = _noUser
+		}
 		return resp, status.FromError(err).Err()
 	}
 }
@@ -187,8 +205,7 @@ func NewServer(conf *ServerConfig, opt ...grpc.ServerOption) (s *Server) {
 	})
 	opt = append(opt, keepParam, grpc.UnaryInterceptor(s.interceptor))
 	s.server = grpc.NewServer(opt...)
-	s.Use(s.recovery(), s.handle(), serverLogging(conf.LogFlag), s.stats(), s.validate())
-	s.Use(ratelimiter.New(nil).Limit())
+	s.Use(s.recovery(), s.handle(), serverLogging(), s.stats(), s.validate())
 	return
 }
 
@@ -302,38 +319,17 @@ func (s *Server) RunUnix(file string) error {
 // will panic if any error happend
 // return server itself
 func (s *Server) Start() (*Server, error) {
-	_, err := s.startWithAddr()
-	if err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
-// StartWithAddr create a new goroutine run server with configured listen addr
-// will panic if any error happend
-// return server itself and the actually listened address (if configured listen
-// port is zero, the os will allocate an unused port)
-func (s *Server) StartWithAddr() (*Server, net.Addr, error) {
-	addr, err := s.startWithAddr()
-	if err != nil {
-		return nil, nil, err
-	}
-	return s, addr, nil
-}
-
-func (s *Server) startWithAddr() (net.Addr, error) {
 	lis, err := net.Listen(s.conf.Network, s.conf.Addr)
 	if err != nil {
 		return nil, err
 	}
-	log.Info("warden: start grpc listen addr: %v", lis.Addr())
 	reflection.Register(s.server)
 	go func() {
 		if err := s.Serve(lis); err != nil {
 			panic(err)
 		}
 	}()
-	return lis.Addr(), nil
+	return s, nil
 }
 
 // Serve accepts incoming connections on the listener lis, creating a new

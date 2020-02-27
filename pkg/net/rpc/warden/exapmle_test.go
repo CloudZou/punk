@@ -9,7 +9,7 @@ import (
 	"github.com/CloudZou/punk/pkg/log"
 	"github.com/CloudZou/punk/pkg/net/netutil/breaker"
 	"github.com/CloudZou/punk/pkg/net/rpc/warden"
-	pb "github.com/CloudZou/punk/pkg/net/rpc/warden/internal/proto/testproto"
+	pb "github.com/CloudZou/punk/pkg/net/rpc/warden/proto/testproto"
 	xtime "github.com/CloudZou/punk/pkg/time"
 
 	"google.golang.org/grpc"
@@ -60,8 +60,9 @@ func ExampleClient() {
 		Timeout: xtime.Duration(time.Second * 10),
 		Breaker: &breaker.Config{
 			Window:  xtime.Duration(3 * time.Second),
+			Sleep:   xtime.Duration(3 * time.Second),
 			Bucket:  10,
-			K:       1.5,
+			Ratio:   0.3,
 			Request: 20,
 		},
 	})

@@ -6,15 +6,15 @@ import (
 
 // metadata common key
 const (
+	MetaColor   = "color"
 	MetaWeight  = "weight"
 	MetaCluster = "cluster"
 	MetaZone    = "zone"
-	MetaColor   = "color"
 )
 
 // Instance represents a server the client connects to.
 type Instance struct {
-	// Region is region.
+	// Region bj/sh/gz
 	Region string `json:"region"`
 	// Zone is IDC.
 	Zone string `json:"zone"`
@@ -24,7 +24,7 @@ type Instance struct {
 	AppID string `json:"appid"`
 	// Hostname is hostname from docker.
 	Hostname string `json:"hostname"`
-	// Addrs is the address of app instance
+	// Addrs is the adress of app instance
 	// format: scheme://host
 	Addrs []string `json:"addrs"`
 	// Version is publishing version.
@@ -34,47 +34,25 @@ type Instance struct {
 	// Metadata is the information associated with Addr, which may be used
 	// to make load balancing decision.
 	Metadata map[string]string `json:"metadata"`
-	// Status instance status, eg: 1UP 2Waiting
-	Status int64 `json:"status"`
+	Status   int64
 }
 
 // Resolver resolve naming service
 type Resolver interface {
-	Fetch(context.Context) (*InstancesInfo, bool)
+	Fetch(context.Context) (map[string][]*Instance, bool)
+	//Unwatch(id string)
 	Watch() <-chan struct{}
 	Close() error
 }
 
-// Registry Register an instance and renew automatically.
+// Registry Register an instance and renew automatically
 type Registry interface {
-	Register(ctx context.Context, ins *Instance) (cancel context.CancelFunc, err error)
+	Register(context.Context, *Instance) (context.CancelFunc, error)
 	Close() error
 }
 
 // Builder resolver builder.
 type Builder interface {
-	Build(id string, options ...BuildOpt) Resolver
+	Build(id string) Resolver
 	Scheme() string
-}
-
-// InstancesInfo instance info.
-type InstancesInfo struct {
-	Instances map[string][]*Instance `json:"instances"`
-	LastTs    int64                  `json:"latest_timestamp"`
-	Scheduler *Scheduler             `json:"scheduler"`
-}
-
-// Scheduler scheduler.
-type Scheduler struct {
-	Clients map[string]*ZoneStrategy `json:"clients"`
-}
-
-// ZoneStrategy is the scheduling strategy of all zones
-type ZoneStrategy struct {
-	Zones map[string]*Strategy `json:"zones"`
-}
-
-// Strategy is zone scheduling strategy.
-type Strategy struct {
-	Weight int64 `json:"weight"`
 }

@@ -1,16 +1,40 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["discovery.go"],
+    srcs = [
+        "discovery.go",
+        "shuffle.go",
+    ],
     importpath = "github.com/CloudZou/punk/pkg/naming/discovery",
     visibility = ["//visibility:public"],
     deps = [
         "//pkg/conf/env:go_default_library",
         "//pkg/ecode:go_default_library",
+        "//pkg/exp/feature:go_default_library",
         "//pkg/log:go_default_library",
         "//pkg/naming:go_default_library",
         "//pkg/net/http/blademaster:go_default_library",
+        "//pkg/net/netutil:go_default_library",
+        "//pkg/net/netutil/breaker:go_default_library",
         "//pkg/time:go_default_library",
+        "//pkg/xstr:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "discovery_test.go",
+        "example_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/conf/env:go_default_library",
+        "//pkg/ecode:go_default_library",
+        "//pkg/exp/feature:go_default_library",
+        "//pkg/naming:go_default_library",
+        "//pkg/net/http/blademaster:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
     ],
 )

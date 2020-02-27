@@ -1,0 +1,29 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["tip.go"],
+    importpath = "github.com/CloudZou/punk/pkg/ecode/tip",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/ecode:go_default_library",
+        "//pkg/log:go_default_library",
+        "//pkg/net/http/blademaster:go_default_library",
+        "//pkg/time:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "example_test.go",
+        "tip_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/ecode:go_default_library",
+        "//pkg/net/http/blademaster:go_default_library",
+        "//pkg/net/netutil/breaker:go_default_library",
+        "//pkg/time:go_default_library",
+    ],
+)

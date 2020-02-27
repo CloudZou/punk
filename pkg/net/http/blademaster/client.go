@@ -41,8 +41,14 @@ func init() {
 	}
 }
 
+type App struct {
+	Key    string
+	Secret string
+}
+
 // ClientConfig is http client conf.
 type ClientConfig struct {
+	*App
 	Dial      xtime.Duration
 	Timeout   xtime.Duration
 	KeepAlive xtime.Duration

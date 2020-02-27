@@ -11,6 +11,10 @@ import (
 type Config struct {
 	SwitchOff bool // breaker switch,default off.
 
+	// Hystrix
+	Ratio float32
+	Sleep xtime.Duration
+
 	// Google
 	K float64
 
@@ -22,6 +26,12 @@ type Config struct {
 func (conf *Config) fix() {
 	if conf.K == 0 {
 		conf.K = 1.5
+	}
+	if conf.Ratio == 0 {
+		conf.Ratio = 0.5
+	}
+	if conf.Sleep == 0 {
+		conf.Sleep = xtime.Duration(500 * time.Millisecond)
 	}
 	if conf.Request == 0 {
 		conf.Request = 100
@@ -73,6 +83,9 @@ var (
 		Window:  xtime.Duration(3 * time.Second),
 		Bucket:  10,
 		Request: 100,
+
+		Sleep: xtime.Duration(500 * time.Millisecond),
+		Ratio: 0.5,
 
 		// Percentage of failures must be lower than 33.33%
 		K: 1.5,

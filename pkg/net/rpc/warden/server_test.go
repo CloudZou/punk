@@ -14,13 +14,15 @@ import (
 	"time"
 
 	"github.com/CloudZou/punk/pkg/ecode"
-	"github.com/CloudZou/punk/pkg/log"
+	errpb "github.com/CloudZou/punk/pkg/ecode/pb"
+	"github.com/CloudZou/punk/pkg/ecode/tip"
 	nmd "github.com/CloudZou/punk/pkg/net/metadata"
 	"github.com/CloudZou/punk/pkg/net/netutil/breaker"
-	pb "github.com/CloudZou/punk/pkg/net/rpc/warden/internal/proto/testproto"
+	pb "github.com/CloudZou/punk/pkg/net/rpc/warden/proto/testproto"
 	xtrace "github.com/CloudZou/punk/pkg/net/trace"
 	xtime "github.com/CloudZou/punk/pkg/time"
 
+	"github.com/golang/protobuf/ptypes"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
@@ -28,10 +30,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func init() {
+	tip.Init(nil)
+}
+
 const (
 	_separator = "\001"
-
-	_testAddr = "127.0.0.1:9090"
 )
 
 var (
@@ -43,9 +47,11 @@ var (
 		Dial:    xtime.Duration(time.Second * 10),
 		Timeout: xtime.Duration(time.Second * 10),
 		Breaker: &breaker.Config{
-			Window: xtime.Duration(3 * time.Second),
-			Bucket: 10,
-			K:      1.5,
+			Window:  xtime.Duration(3 * time.Second),
+			Sleep:   xtime.Duration(3 * time.Second),
+			Bucket:  10,
+			Ratio:   0.3,
+			Request: 20,
 		},
 	}
 	clientConfig2 = ClientConfig{
@@ -53,9 +59,10 @@ var (
 		Timeout: xtime.Duration(time.Second * 10),
 		Breaker: &breaker.Config{
 			Window:  xtime.Duration(3 * time.Second),
+			Sleep:   xtime.Duration(3 * time.Second),
 			Bucket:  10,
+			Ratio:   0.3,
 			Request: 20,
-			K:       1.5,
 		},
 		Method: map[string]*ClientConfig{`/testproto.Greeter/SayHello`: {Timeout: xtime.Duration(time.Millisecond * 200)}},
 	}
@@ -109,8 +116,12 @@ func (s *helloServer) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.He
 		}
 		return &pb.HelloReply{Message: "Hello " + in.Name, Success: true}, nil
 	} else if in.Name == "error_detail" {
-		err, _ := ecode.Error(ecode.Code(123456), "test_error_detail").WithDetails(&pb.HelloReply{Success: true})
-		return nil, err
+		any, _ := ptypes.MarshalAny(&pb.HelloReply{Success: true})
+		return nil, &errpb.Error{
+			ErrCode:    123456,
+			ErrMessage: "test_error_detail",
+			ErrDetail:  any,
+		}
 	} else if in.Name == "ecode_status" {
 		reply := &pb.HelloReply{Message: "status", Success: true}
 		st, _ := ecode.Error(ecode.RequestErr, "RequestErr").WithDetails(reply)
@@ -118,9 +129,9 @@ func (s *helloServer) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.He
 	} else if in.Name == "general_error" {
 		return nil, fmt.Errorf("haha is error")
 	} else if in.Name == "ecode_code_error" {
-		return nil, ecode.Conflict
+		return nil, ecode.ServerErr
 	} else if in.Name == "pb_error_error" {
-		return nil, ecode.Error(ecode.Code(11122), "haha")
+		return nil, &errpb.Error{ErrCode: 11122, ErrMessage: "haha"}
 	} else if in.Name == "ecode_status_error" {
 		return nil, ecode.Error(ecode.RequestErr, "RequestErr")
 	} else if in.Name == "test_remote_port" {
@@ -129,12 +140,7 @@ func (s *helloServer) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.He
 		}
 		reply := &pb.HelloReply{Message: "status", Success: true}
 		return reply, nil
-	} else if in.Name == "time_opt" {
-		time.Sleep(time.Second)
-		reply := &pb.HelloReply{Message: "status", Success: true}
-		return reply, nil
 	}
-
 	return &pb.HelloReply{Message: "Hello " + in.Name, Success: true}, nil
 }
 
@@ -158,7 +164,7 @@ func (s *helloServer) StreamHello(ss pb.Greeter_StreamHelloServer) error {
 
 func runServer(t *testing.T, interceptors ...grpc.UnaryServerInterceptor) func() {
 	return func() {
-		server = NewServer(&ServerConfig{Addr: _testAddr, Timeout: xtime.Duration(time.Second)})
+		server = NewServer(&ServerConfig{Addr: "127.0.0.1:8080", Timeout: xtime.Duration(time.Second)})
 		pb.RegisterGreeterServer(server.Server(), &helloServer{t})
 		server.Use(
 			func(ctx context.Context, req interface{}, args *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
@@ -182,7 +188,7 @@ func runServer(t *testing.T, interceptors ...grpc.UnaryServerInterceptor) func()
 func runClient(ctx context.Context, cc *ClientConfig, t *testing.T, name string, age int32, interceptors ...grpc.UnaryClientInterceptor) (resp *pb.HelloReply, err error) {
 	client := NewClient(cc)
 	client.Use(interceptors...)
-	conn, err := client.Dial(context.Background(), _testAddr)
+	conn, err := client.Dial(context.Background(), "127.0.0.1:8080")
 	if err != nil {
 		panic(fmt.Errorf("did not connect: %v,req: %v %v", err, name, age))
 	}
@@ -192,20 +198,19 @@ func runClient(ctx context.Context, cc *ClientConfig, t *testing.T, name string,
 	return
 }
 
-func TestMain(t *testing.M) {
-	log.Init(nil)
-}
-
 func Test_Warden(t *testing.T) {
+	go func() {
+		time.Sleep(time.Second * 10)
+		panic("run test warden timeout,exit now!")
+	}()
 	xtrace.Init(&xtrace.Config{Addr: "127.0.0.1:9982", Timeout: xtime.Duration(time.Second * 3)})
 	go _testOnce.Do(runServer(t))
 	go runClient(context.Background(), &clientConfig, t, "trace_test", 0)
-	//testTrace(t, 9982, false)
-	//testInterceptorChain(t)
+	testTrace(t, 9982, false)
+	testInterceptorChain(t)
 	testValidation(t)
 	testServerRecovery(t)
 	testClientRecovery(t)
-	testTimeoutOpt(t)
 	testErrorDetail(t)
 	testECodeStatus(t)
 	testColorPass(t)
@@ -221,26 +226,6 @@ func testValidation(t *testing.T) {
 	_, err := runClient(context.Background(), &clientConfig, t, "", 0)
 	if !ecode.EqualError(ecode.RequestErr, err) {
 		t.Fatalf("testValidation should return ecode.RequestErr,but is %v", err)
-	}
-}
-
-func testTimeoutOpt(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
-	defer cancel()
-	client := NewClient(&clientConfig)
-	conn, err := client.Dial(ctx, _testAddr)
-	if err != nil {
-		t.Fatalf("did not connect: %v", err)
-	}
-	defer conn.Close()
-	c := pb.NewGreeterClient(conn)
-	start := time.Now()
-	_, err = c.SayHello(ctx, &pb.HelloRequest{Name: "time_opt", Age: 0}, WithTimeoutCallOption(time.Millisecond*500))
-	if err == nil {
-		t.Fatalf("recovery must return error")
-	}
-	if time.Since(start) < time.Millisecond*400 {
-		t.Fatalf("client timeout must be greater than 400 Milliseconds;err:=%v", err)
 	}
 }
 
@@ -261,14 +246,14 @@ func testAllErrorCase(t *testing.T) {
 		ec := ecode.Cause(err)
 		assert.Equal(t, -500, ec.Code())
 		// remove this assert in future
-		assert.Equal(t, "-500", ec.Message())
+		assert.Equal(t, "服务器错误", ec.Message())
 	})
 	t.Run("ecode_code_error", func(t *testing.T) {
 		_, err := runClient(ctx, &clientConfig, t, "ecode_code_error", 0)
 		ec := ecode.Cause(err)
-		assert.Equal(t, ecode.Conflict.Code(), ec.Code())
+		assert.Equal(t, ecode.ServerErr.Code(), ec.Code())
 		// remove this assert in future
-		assert.Equal(t, "-409", ec.Message())
+		assert.Equal(t, "标签错误", ec.Message())
 	})
 	t.Run("pb_error_error", func(t *testing.T) {
 		_, err := runClient(ctx, &clientConfig, t, "pb_error_error", 0)
@@ -286,13 +271,13 @@ func testAllErrorCase(t *testing.T) {
 
 func testBreaker(t *testing.T) {
 	client := NewClient(&clientConfig)
-	conn, err := client.Dial(context.Background(), _testAddr)
+	conn, err := client.Dial(context.Background(), "127.0.0.1:8080")
 	if err != nil {
 		t.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewGreeterClient(conn)
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 35; i++ {
 		_, err := c.SayHello(context.Background(), &pb.HelloRequest{Name: "breaker_test"})
 		if err != nil {
 			if ecode.EqualError(ecode.ServiceUnavailable, err) {
@@ -380,7 +365,7 @@ func testClientRecovery(t *testing.T) {
 		panic("client recovery test")
 	})
 
-	conn, err := client.Dial(ctx, _testAddr)
+	conn, err := client.Dial(ctx, "127.0.0.1:8080")
 	if err != nil {
 		t.Fatalf("did not connect: %v", err)
 	}
@@ -391,12 +376,12 @@ func testClientRecovery(t *testing.T) {
 	if err == nil {
 		t.Fatalf("recovery must return error")
 	}
-	e, ok := errors.Cause(err).(ecode.Codes)
+	_, ok := errors.Cause(err).(ecode.Codes)
 	if !ok {
 		t.Fatalf("recovery must return ecode error")
 	}
 
-	if !ecode.EqualError(ecode.ServerErr, e) {
+	if !ecode.EqualError(ecode.ServerErr, err) {
 		t.Fatalf("recovery must return ecode.RPCClientErr")
 	}
 }
@@ -405,7 +390,7 @@ func testServerRecovery(t *testing.T) {
 	ctx := context.Background()
 	client := NewClient(&clientConfig)
 
-	conn, err := client.Dial(ctx, _testAddr)
+	conn, err := client.Dial(ctx, "127.0.0.1:8080")
 	if err != nil {
 		t.Fatalf("did not connect: %v", err)
 	}
@@ -443,8 +428,8 @@ func testErrorDetail(t *testing.T) {
 		t.Fatalf("testErrorDetail must return ecode error")
 	} else if ec.Code() != 123456 || ec.Message() != "test_error_detail" || len(ec.Details()) == 0 {
 		t.Fatalf("testErrorDetail must return code:123456 and message:test_error_detail, code: %d, message: %s, details length: %d", ec.Code(), ec.Message(), len(ec.Details()))
-	} else if _, ok := ec.Details()[len(ec.Details())-1].(*pb.HelloReply); !ok {
-		t.Fatalf("expect get pb.HelloReply %#v", ec.Details()[len(ec.Details())-1])
+	} else if _, ok := ec.Details()[0].(*pb.HelloReply); !ok {
+		t.Fatalf("expect get pb.HelloReply")
 	}
 }
 
@@ -490,10 +475,11 @@ func testTrace(t *testing.T, port int, isStream bool) {
 	if len(strs[0]) == 0 || len(strs[1]) == 0 {
 		t.Fatalf("trace str's length must be greater than 0")
 	}
+
 }
 
 func BenchmarkServer(b *testing.B) {
-	server := NewServer(&ServerConfig{Addr: _testAddr, Timeout: xtime.Duration(time.Second)})
+	server := NewServer(&ServerConfig{Addr: "127.0.0.1:8080", Timeout: xtime.Duration(time.Second)})
 	go func() {
 		pb.RegisterGreeterServer(server.Server(), &helloServer{})
 		if _, err := server.Start(); err != nil {
@@ -505,7 +491,7 @@ func BenchmarkServer(b *testing.B) {
 		server.Server().Stop()
 	}()
 	client := NewClient(&clientConfig)
-	conn, err := client.Dial(context.Background(), _testAddr)
+	conn, err := client.Dial(context.Background(), "127.0.0.1:8080")
 	if err != nil {
 		conn.Close()
 		b.Fatalf("did not connect: %v", err)
@@ -540,67 +526,5 @@ func TestParseDSN(t *testing.T) {
 	config = parseDSN(dsn)
 	if config.Network != "unix" || config.Addr != "/temp/warden.sock" || time.Duration(config.Timeout) != time.Millisecond*300 {
 		t.Fatalf("parseDSN(%s) not compare config result(%+v)", dsn, config)
-	}
-}
-
-type testServer struct {
-	helloFn func(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error)
-}
-
-func (t *testServer) SayHello(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error) {
-	return t.helloFn(ctx, req)
-}
-
-func (t *testServer) StreamHello(pb.Greeter_StreamHelloServer) error { panic("not implemented") }
-
-// NewTestServerClient .
-func NewTestServerClient(invoker func(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error), svrcfg *ServerConfig, clicfg *ClientConfig) (pb.GreeterClient, func() error) {
-	srv := NewServer(svrcfg)
-	pb.RegisterGreeterServer(srv.Server(), &testServer{helloFn: invoker})
-
-	lis, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		panic(err)
-	}
-	ch := make(chan bool, 1)
-	go func() {
-		ch <- true
-		srv.Serve(lis)
-	}()
-	<-ch
-	println(lis.Addr().String())
-	conn, err := NewConn(lis.Addr().String())
-	if err != nil {
-		panic(err)
-	}
-	return pb.NewGreeterClient(conn), func() error { return srv.Shutdown(context.Background()) }
-}
-
-func TestMetadata(t *testing.T) {
-	cli, cancel := NewTestServerClient(func(ctx context.Context, req *pb.HelloRequest) (*pb.HelloReply, error) {
-		assert.Equal(t, "red", nmd.String(ctx, nmd.Color))
-		assert.Equal(t, "2.2.3.3", nmd.String(ctx, nmd.RemoteIP))
-		assert.Equal(t, "2233", nmd.String(ctx, nmd.RemotePort))
-		return &pb.HelloReply{}, nil
-	}, nil, nil)
-	defer cancel()
-
-	ctx := nmd.NewContext(context.Background(), nmd.MD{
-		nmd.Color:      "red",
-		nmd.RemoteIP:   "2.2.3.3",
-		nmd.RemotePort: "2233",
-	})
-	_, err := cli.SayHello(ctx, &pb.HelloRequest{Name: "test"})
-	assert.Nil(t, err)
-}
-
-func TestStartWithAddr(t *testing.T) {
-	configuredAddr := "127.0.0.1:0"
-	server = NewServer(&ServerConfig{Addr: configuredAddr, Timeout: xtime.Duration(time.Second)})
-	if _, realAddr, err := server.StartWithAddr(); err == nil && realAddr != nil {
-		assert.NotEqual(t, realAddr.String(), configuredAddr)
-	} else {
-		assert.NotNil(t, realAddr)
-		assert.Nil(t, err)
 	}
 }

@@ -3,17 +3,11 @@ package wrr
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"testing"
-	"time"
 
-	"github.com/CloudZou/punk/pkg/conf/env"
 	nmd "github.com/CloudZou/punk/pkg/net/metadata"
-	wmeta "github.com/CloudZou/punk/pkg/net/rpc/warden/internal/metadata"
-	"github.com/CloudZou/punk/pkg/stat/metric"
+	wmeta "github.com/CloudZou/punk/pkg/net/rpc/warden/metadata"
 
-	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/resolver"
 )
@@ -98,92 +92,4 @@ func TestBalancerPick(t *testing.T) {
 			t.Fatalf("the (%d) subconn picked(%s),but expected(%s)", i, sc.addr.Addr, res[i])
 		}
 	}
-
-	// test for env color
-	ctx = context.Background()
-	env.Color = "red"
-	for i := 0; i < 6; i++ {
-		conn, _, err := picker.Pick(ctx, balancer.PickOptions{})
-		if err != nil {
-			t.Fatalf("picker.Pick failed!idx:=%d", i)
-		}
-		sc := conn.(*testSubConn)
-		if sc.addr.Addr != res2[i] {
-			t.Fatalf("the (%d) subconn picked(%s),but expected(%s)", i, sc.addr.Addr, res2[i])
-		}
-	}
-}
-
-func TestBalancerDone(t *testing.T) {
-	scs := map[resolver.Address]balancer.SubConn{}
-	sc1 := &testSubConn{
-		addr: resolver.Address{
-			Addr: "test1",
-			Metadata: wmeta.MD{
-				Weight: 8,
-			},
-		},
-	}
-	scs[sc1.addr] = sc1
-	b := &wrrPickerBuilder{}
-	picker := b.Build(scs)
-
-	_, done, _ := picker.Pick(context.Background(), balancer.PickOptions{})
-	time.Sleep(100 * time.Millisecond)
-	done(balancer.DoneInfo{Err: status.Errorf(codes.Unknown, "test")})
-	err, req := picker.(*wrrPicker).subConns[0].errSummary()
-	assert.Equal(t, int64(0), err)
-	assert.Equal(t, int64(1), req)
-
-	latency, count := picker.(*wrrPicker).subConns[0].latencySummary()
-	expectLatency := float64(100*time.Millisecond) / 1e5
-	if latency < expectLatency || latency > (expectLatency+500) {
-		t.Fatalf("latency is less than 100ms or greater than 150ms, %f", latency)
-	}
-	assert.Equal(t, int64(1), count)
-
-	_, done, _ = picker.Pick(context.Background(), balancer.PickOptions{})
-	done(balancer.DoneInfo{Err: status.Errorf(codes.Aborted, "test")})
-	err, req = picker.(*wrrPicker).subConns[0].errSummary()
-	assert.Equal(t, int64(1), err)
-	assert.Equal(t, int64(2), req)
-}
-
-func TestErrSummary(t *testing.T) {
-	sc := &subConn{
-		err: metric.NewRollingCounter(metric.RollingCounterOpts{
-			Size:           10,
-			BucketDuration: time.Millisecond * 100,
-		}),
-		latency: metric.NewRollingGauge(metric.RollingGaugeOpts{
-			Size:           10,
-			BucketDuration: time.Millisecond * 100,
-		}),
-	}
-	for i := 0; i < 10; i++ {
-		sc.err.Add(0)
-		sc.err.Add(1)
-	}
-	err, req := sc.errSummary()
-	assert.Equal(t, int64(10), err)
-	assert.Equal(t, int64(20), req)
-}
-
-func TestLatencySummary(t *testing.T) {
-	sc := &subConn{
-		err: metric.NewRollingCounter(metric.RollingCounterOpts{
-			Size:           10,
-			BucketDuration: time.Millisecond * 100,
-		}),
-		latency: metric.NewRollingGauge(metric.RollingGaugeOpts{
-			Size:           10,
-			BucketDuration: time.Millisecond * 100,
-		}),
-	}
-	for i := 1; i <= 100; i++ {
-		sc.latency.Add(int64(i))
-	}
-	latency, count := sc.latencySummary()
-	assert.Equal(t, 50.50, latency)
-	assert.Equal(t, int64(100), count)
 }

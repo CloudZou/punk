@@ -1,0 +1,9 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["stat.go"],
+    importpath = "github.com/CloudZou/punk/pkg/stat",
+    visibility = ["//visibility:public"],
+    deps = ["//pkg/stat/prom:go_default_library"],
+)

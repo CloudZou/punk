@@ -2,7 +2,9 @@ package resolver
 
 import (
 	"context"
+	"math/rand"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -10,8 +12,9 @@ import (
 	"github.com/CloudZou/punk/pkg/conf/env"
 	"github.com/CloudZou/punk/pkg/log"
 	"github.com/CloudZou/punk/pkg/naming"
-	wmeta "github.com/CloudZou/punk/pkg/net/rpc/warden/internal/metadata"
+	wmeta "github.com/CloudZou/punk/pkg/net/rpc/warden/metadata"
 
+	"github.com/dgryski/go-farm"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/resolver"
 )
@@ -76,10 +79,12 @@ func (b *Builder) Build(target resolver.Target, cc resolver.ClientConn, opts res
 		}
 	}
 	r := &Resolver{
-		nr:   b.Builder.Build(str[0], naming.Filter(Scheme, clusters), naming.ScheduleNode(zone), naming.Subset(int(ss))),
-		cc:   cc,
-		quit: make(chan struct{}, 1),
-		zone: zone,
+		nr:         b.Builder.Build(str[0]),
+		cc:         cc,
+		quit:       make(chan struct{}, 1),
+		clusters:   clusters,
+		zone:       zone,
+		subsetSize: ss,
 	}
 	go r.updateproc()
 	return r, nil
@@ -121,16 +126,40 @@ func (r *Resolver) updateproc() {
 				return
 			}
 		}
-		if ins, ok := r.nr.Fetch(context.Background()); ok {
-			instances, _ := ins.Instances[r.zone]
-			if len(instances) == 0 {
-				for _, value := range ins.Instances {
+		if insMap, ok := r.nr.Fetch(context.Background()); ok {
+			instances, ok := insMap[r.zone]
+			if !ok {
+				for _, value := range insMap {
 					instances = append(instances, value...)
 				}
+			}
+			if r.subsetSize > 0 && len(instances) > 0 {
+				instances = r.subset(instances, env.Hostname, r.subsetSize)
 			}
 			r.newAddress(instances)
 		}
 	}
+}
+
+func (r *Resolver) subset(backends []*naming.Instance, clientID string, size int64) []*naming.Instance {
+	if len(backends) <= int(size) {
+		return backends
+	}
+	sort.Slice(backends, func(i, j int) bool {
+		return backends[i].Hostname < backends[j].Hostname
+	})
+	count := int64(len(backends)) / size
+
+	id := farm.Fingerprint64([]byte(clientID))
+	round := int64(id / uint64(count))
+
+	s := rand.NewSource(round)
+	ra := rand.New(s)
+	ra.Shuffle(len(backends), func(i, j int) {
+		backends[i], backends[j] = backends[j], backends[i]
+	})
+	start := (id % uint64(count)) * uint64(size)
+	return backends[int(start) : int(start)+int(size)]
 }
 
 func (r *Resolver) newAddress(instances []*naming.Instance) {
@@ -139,6 +168,12 @@ func (r *Resolver) newAddress(instances []*naming.Instance) {
 	}
 	addrs := make([]resolver.Address, 0, len(instances))
 	for _, ins := range instances {
+		if len(r.clusters) > 0 {
+			if _, ok := r.clusters[ins.Metadata[naming.MetaCluster]]; !ok {
+				continue
+			}
+		}
+
 		var weight int64
 		if weight, _ = strconv.ParseInt(ins.Metadata[naming.MetaWeight], 10, 64); weight <= 0 {
 			weight = 10
@@ -150,14 +185,17 @@ func (r *Resolver) newAddress(instances []*naming.Instance) {
 				rpc = u.Host
 			}
 		}
+		if rpc == "" {
+			log.Warn("warden/resolver: invalid rpc address(%s,%s,%v) found!", ins.AppID, ins.Hostname, ins.Addrs)
+			continue
+		}
 		addr := resolver.Address{
 			Addr:       rpc,
 			Type:       resolver.Backend,
 			ServerName: ins.AppID,
-			Metadata:   wmeta.MD{Weight: uint64(weight), Color: ins.Metadata[naming.MetaColor]},
+			Metadata:   wmeta.MD{Weight: weight, Color: ins.Metadata[naming.MetaColor]},
 		}
 		addrs = append(addrs, addr)
 	}
-	log.Info("resolver: finally get %d instances", len(addrs))
 	r.cc.NewAddress(addrs)
 }

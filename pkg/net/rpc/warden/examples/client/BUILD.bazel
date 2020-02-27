@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["client.go"],
+    importpath = "github.com/CloudZou/punk/pkg/net/rpc/warden/examples/client",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/ecode:go_default_library",
+        "//pkg/net/rpc/warden:go_default_library",
+        "//pkg/net/rpc/warden/proto/testproto:go_default_library",
+        "//vendor/github.com/golang/protobuf/ptypes:go_default_library",
+        "//vendor/github.com/golang/protobuf/ptypes/any:go_default_library",
+        "//vendor/github.com/pkg/errors:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "client",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

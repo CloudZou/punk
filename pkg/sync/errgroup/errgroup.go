@@ -1,3 +1,9 @@
+// Copyright 2016 The Go Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
+// Package errgroup provides synchronization, error propagation, and Context
+// cancelation for groups of goroutines working on subtasks of a common task.
 package errgroup
 
 import (
@@ -17,35 +23,23 @@ type Group struct {
 	errOnce sync.Once
 
 	workerOnce sync.Once
-	ch         chan func(ctx context.Context) error
-	chs        []func(ctx context.Context) error
+	ch         chan func() error
+	chs        []func() error
 
-	ctx    context.Context
 	cancel func()
 }
 
-// WithContext create a Group.
-// given function from Go will receive this context,
-func WithContext(ctx context.Context) *Group {
-	return &Group{ctx: ctx}
-}
-
-// WithCancel create a new Group and an associated Context derived from ctx.
+// WithContext returns a new Group and an associated Context derived from ctx.
 //
-// given function from Go will receive context derived from this ctx,
 // The derived Context is canceled the first time a function passed to Go
 // returns a non-nil error or the first time Wait returns, whichever occurs
 // first.
-func WithCancel(ctx context.Context) *Group {
+func WithContext(ctx context.Context) (*Group, context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
-	return &Group{ctx: ctx, cancel: cancel}
+	return &Group{cancel: cancel}, ctx
 }
 
-func (g *Group) do(f func(ctx context.Context) error) {
-	ctx := g.ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
+func (g *Group) do(f func() error) {
 	var err error
 	defer func() {
 		if r := recover(); r != nil {
@@ -63,7 +57,7 @@ func (g *Group) do(f func(ctx context.Context) error) {
 		}
 		g.wg.Done()
 	}()
-	err = f(ctx)
+	err = f()
 }
 
 // GOMAXPROCS set max goroutine to work.
@@ -72,7 +66,7 @@ func (g *Group) GOMAXPROCS(n int) {
 		panic("errgroup: GOMAXPROCS must great than 0")
 	}
 	g.workerOnce.Do(func() {
-		g.ch = make(chan func(context.Context) error, n)
+		g.ch = make(chan func() error, n)
 		for i := 0; i < n; i++ {
 			go func() {
 				for f := range g.ch {
@@ -87,7 +81,7 @@ func (g *Group) GOMAXPROCS(n int) {
 //
 // The first call to return a non-nil error cancels the group; its error will be
 // returned by Wait.
-func (g *Group) Go(f func(ctx context.Context) error) {
+func (g *Group) Go(f func() error) {
 	g.wg.Add(1)
 	if g.ch != nil {
 		select {
@@ -108,6 +102,7 @@ func (g *Group) Wait() error {
 			g.ch <- f
 		}
 	}
+
 	g.wg.Wait()
 	if g.ch != nil {
 		close(g.ch) // let all receiver exit

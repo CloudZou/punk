@@ -2,7 +2,6 @@ package resolver
 
 import (
 	"context"
-
 	"github.com/CloudZou/punk/pkg/conf/env"
 	"github.com/CloudZou/punk/pkg/naming"
 )
@@ -12,7 +11,7 @@ type mockDiscoveryBuilder struct {
 	watchch   map[string][]*mockDiscoveryResolver
 }
 
-func (mb *mockDiscoveryBuilder) Build(id string, opts ...naming.BuildOpt) naming.Resolver {
+func (mb *mockDiscoveryBuilder) Build(id string) naming.Resolver {
 	mr := &mockDiscoveryResolver{
 		d:       mb,
 		watchch: make(chan struct{}, 1),
@@ -26,18 +25,19 @@ func (mb *mockDiscoveryBuilder) Scheme() string {
 }
 
 type mockDiscoveryResolver struct {
+	//instances map[string]*naming.Instance
 	d       *mockDiscoveryBuilder
 	watchch chan struct{}
 }
 
 var _ naming.Resolver = &mockDiscoveryResolver{}
 
-func (md *mockDiscoveryResolver) Fetch(ctx context.Context) (*naming.InstancesInfo, bool) {
+func (md *mockDiscoveryResolver) Fetch(ctx context.Context) (map[string][]*naming.Instance, bool) {
 	zones := make(map[string][]*naming.Instance)
 	for _, v := range md.d.instances {
 		zones[v.Zone] = append(zones[v.Zone], v)
 	}
-	return &naming.InstancesInfo{Instances: zones}, len(zones) > 0
+	return zones, len(zones) > 0
 }
 
 func (md *mockDiscoveryResolver) Watch() <-chan struct{} {

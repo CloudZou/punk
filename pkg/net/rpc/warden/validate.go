@@ -15,7 +15,7 @@ var validate = validator.New()
 func (s *Server) validate() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, args *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		if err = validate.Struct(req); err != nil {
-			err = ecode.Error(ecode.RequestErr, err.Error())
+			err = ecode.RequestErr
 			return
 		}
 		resp, err = handler(ctx, req)

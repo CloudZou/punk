@@ -8,11 +8,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/CloudZou/punk/pkg/conf/env"
 	"github.com/CloudZou/punk/pkg/log"
 	nmd "github.com/CloudZou/punk/pkg/net/metadata"
-	wmeta "github.com/CloudZou/punk/pkg/net/rpc/warden/internal/metadata"
-	"github.com/CloudZou/punk/pkg/stat/metric"
+	wmeta "github.com/CloudZou/punk/pkg/net/rpc/warden/metadata"
+	"github.com/CloudZou/punk/pkg/stat/summary"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/balancer"
 	"google.golang.org/grpc/balancer/base"
@@ -53,43 +53,15 @@ type subConn struct {
 	addr resolver.Address
 	meta wmeta.MD
 
-	err     metric.RollingCounter
-	latency metric.RollingGauge
-	si      serverInfo
+	err      summary.Summary
+	lantency summary.Summary
+	si       serverInfo
 	// effective weight
 	ewt int64
 	// current weight
 	cwt int64
 	// last score
 	score float64
-}
-
-func (c *subConn) errSummary() (err int64, req int64) {
-	c.err.Reduce(func(iterator metric.Iterator) float64 {
-		for iterator.Next() {
-			bucket := iterator.Bucket()
-			req += bucket.Count
-			for _, p := range bucket.Points {
-				err += int64(p)
-			}
-		}
-		return 0
-	})
-	return
-}
-
-func (c *subConn) latencySummary() (latency float64, count int64) {
-	c.latency.Reduce(func(iterator metric.Iterator) float64 {
-		for iterator.Next() {
-			bucket := iterator.Bucket()
-			count += bucket.Count
-			for _, p := range bucket.Points {
-				latency += p
-			}
-		}
-		return 0
-	})
-	return latency / float64(count), count
 }
 
 // statistics is info for log
@@ -125,10 +97,24 @@ func Stats() grpc.UnaryClientInterceptor {
 		if !ok {
 			return
 		}
-		if strs, ok := trailer[wmeta.CPUUsage]; ok {
+		if strs, ok := trailer[nmd.CPUUsage]; ok {
 			if cpu, err2 := strconv.ParseInt(strs[0], 10, 64); err2 == nil && cpu > 0 {
 				atomic.StoreInt64(&conn.si.cpu, cpu)
 			}
+		}
+		var reqs, errs int64
+		if strs, ok := trailer[nmd.Requests]; ok {
+			reqs, _ = strconv.ParseInt(strs[0], 10, 64)
+		}
+		if strs, ok := trailer[nmd.Errors]; ok {
+			errs, _ = strconv.ParseInt(strs[0], 10, 64)
+		}
+		if reqs > 0 && reqs >= errs {
+			success := float64(reqs-errs) / float64(reqs)
+			if success == 0 {
+				success = 0.1
+			}
+			atomic.StoreUint64(&conn.si.success, math.Float64bits(success))
 		}
 		return
 	}
@@ -152,19 +138,12 @@ func (*wrrPickerBuilder) Build(readySCs map[resolver.Address]balancer.SubConn) b
 			addr: addr,
 
 			meta:  meta,
-			ewt:   int64(meta.Weight),
+			ewt:   meta.Weight,
 			score: -1,
 
-			err: metric.NewRollingCounter(metric.RollingCounterOpts{
-				Size:           10,
-				BucketDuration: time.Millisecond * 100,
-			}),
-			latency: metric.NewRollingGauge(metric.RollingGaugeOpts{
-				Size:           10,
-				BucketDuration: time.Millisecond * 100,
-			}),
-
-			si: serverInfo{cpu: 500, success: math.Float64bits(1)},
+			err:      summary.New(time.Second, 10),
+			lantency: summary.New(time.Second, 10),
+			si:       serverInfo{cpu: 500, success: math.Float64bits(1)},
 		}
 		if meta.Color == "" {
 			p.subConns = append(p.subConns, subc)
@@ -193,12 +172,7 @@ type wrrPicker struct {
 }
 
 func (p *wrrPicker) Pick(ctx context.Context, opts balancer.PickOptions) (balancer.SubConn, func(balancer.DoneInfo), error) {
-	// FIXME refactor to unify the color logic
-	color := nmd.String(ctx, nmd.Color)
-	if color == "" && env.Color != "" {
-		color = env.Color
-	}
-	if color != "" {
+	if color := nmd.String(ctx, nmd.Color); color != "" {
 		if cp, ok := p.colors[color]; ok {
 			return cp.pick(ctx, opts)
 		}
@@ -243,9 +217,8 @@ func (p *wrrPicker) pick(ctx context.Context, opts balancer.PickOptions) (balanc
 			}
 		}
 		conn.err.Add(ev)
-
 		now := time.Now()
-		conn.latency.Add(now.Sub(start).Nanoseconds() / 1e5)
+		conn.lantency.Add(now.Sub(start).Nanoseconds() / 1e5)
 		u := atomic.LoadInt64(&p.updateAt)
 		if now.UnixNano()-u < int64(time.Second) {
 			return
@@ -261,8 +234,8 @@ func (p *wrrPicker) pick(ctx context.Context, opts balancer.PickOptions) (balanc
 		for i, conn := range p.subConns {
 			cpu := float64(atomic.LoadInt64(&conn.si.cpu))
 			ss := math.Float64frombits(atomic.LoadUint64(&conn.si.success))
-			errc, req := conn.errSummary()
-			lagv, lagc := conn.latencySummary()
+			errc, req := conn.err.Value()
+			lagv, lagc := conn.lantency.Value()
 
 			if req > 0 && lagc > 0 && lagv > 0 {
 				// client-side success ratio
@@ -272,8 +245,9 @@ func (p *wrrPicker) pick(ctx context.Context, opts balancer.PickOptions) (balanc
 				} else if cs <= 0.2 && req <= 5 {
 					cs = 0.2
 				}
-				conn.score = math.Sqrt((cs * ss * ss * 1e9) / (lagv * cpu))
-				stats[i] = statistics{cs: cs, ss: ss, lantency: lagv, cpu: cpu, req: req}
+				lag := float64(lagv) / float64(lagc)
+				conn.score = math.Sqrt((cs * ss * ss * 1e9) / (lag * cpu))
+				stats[i] = statistics{cs: cs, ss: ss, lantency: lag, cpu: cpu, req: req}
 			}
 			stats[i].addr = conn.addr.Addr
 

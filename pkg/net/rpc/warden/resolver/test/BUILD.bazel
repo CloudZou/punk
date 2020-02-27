@@ -20,9 +20,11 @@ go_test(
         "//pkg/naming:go_default_library",
         "//pkg/net/netutil/breaker:go_default_library",
         "//pkg/net/rpc/warden:go_default_library",
-        "//pkg/net/rpc/warden/internal/proto/testproto:go_default_library",
+        "//pkg/net/rpc/warden/balancer/wrr:go_default_library",
+        "//pkg/net/rpc/warden/proto/testproto:go_default_library",
         "//pkg/net/rpc/warden/resolver:go_default_library",
         "//pkg/time:go_default_library",
         "//vendor/github.com/stretchr/testify/assert:go_default_library",
+        "//vendor/google.golang.org/grpc:go_default_library",
     ],
 )

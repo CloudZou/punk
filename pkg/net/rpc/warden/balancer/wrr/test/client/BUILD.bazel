@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["client.go"],
+    importpath = "github.com/CloudZou/punk/pkg/net/rpc/warden/balancer/wrr/test/client",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//pkg/exp/feature:go_default_library",
+        "//pkg/log:go_default_library",
+        "//pkg/net/rpc/warden:go_default_library",
+        "//pkg/net/rpc/warden/proto/testproto:go_default_library",
+        "//pkg/net/rpc/warden/resolver:go_default_library",
+        "//pkg/net/rpc/warden/resolver/direct:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "client",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

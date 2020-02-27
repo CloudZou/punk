@@ -1,0 +1,16 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "ecode.go",
+        "ecode.pb.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/ecode/pb",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/ecode:go_default_library",
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/github.com/golang/protobuf/ptypes/any:go_default_library",
+    ],
+)

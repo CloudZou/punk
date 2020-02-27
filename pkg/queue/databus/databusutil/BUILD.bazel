@@ -1,0 +1,27 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "doc.go",
+        "group.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/queue/databus/databusutil",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/queue/databus:go_default_library",
+        "//pkg/time:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["group_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/log:go_default_library",
+        "//pkg/queue/databus:go_default_library",
+        "//pkg/sync/errgroup:go_default_library",
+        "//pkg/time:go_default_library",
+    ],
+)
