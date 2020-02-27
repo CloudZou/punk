@@ -1,4 +1,4 @@
-/*Package log 是kratos日志库.
+/*Package log 是punk日志库.
 
 一、主要功能：
 

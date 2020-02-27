@@ -4,7 +4,7 @@ import "github.com/CloudZou/punk/pkg/stat/metric"
 
 const _metricNamespace = "cache"
 
-// be used in tool/kratos-gen-bts
+// be used in tool/punk-gen-bts
 var (
 	MetricHits = metric.NewCounterVec(&metric.CounterVecOpts{
 		Namespace: _metricNamespace,

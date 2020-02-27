@@ -2,6 +2,6 @@ package trace
 
 // Trace key
 const (
-	KratosTraceID    = "kratos-trace-id"
-	KratosTraceDebug = "kratos-trace-debug"
+	KratosTraceID    = "punk-trace-id"
+	KratosTraceDebug = "punk-trace-debug"
 )
