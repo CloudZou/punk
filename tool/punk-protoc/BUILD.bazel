@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "bm.go",
+        "ecode.go",
+        "grpc.go",
+        "main.go",
+        "protoc.go",
+        "swagger.go",
+    ],
+    importpath = "github.com/CloudZou/punk/tool/punk-protoc",
+    visibility = ["//visibility:private"],
+    deps = ["//vendor/github.com/urfave/cli:go_default_library"],
+)
+
+go_binary(
+    name = "punk-protoc",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

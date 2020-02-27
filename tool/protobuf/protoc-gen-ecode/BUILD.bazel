@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["main.go"],
+    importpath = "github.com/CloudZou/punk/tool/protobuf/protoc-gen-ecode",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//tool/protobuf/pkg/gen:go_default_library",
+        "//tool/protobuf/pkg/generator:go_default_library",
+        "//tool/protobuf/protoc-gen-ecode/generator:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "protoc-gen-ecode",
+    embed = [":go_default_library"],
+    visibility = ["//visibility:public"],
+)

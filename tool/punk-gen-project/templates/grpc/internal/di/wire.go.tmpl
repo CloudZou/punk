@@ -11,7 +11,7 @@ import (
 	"github.com/google/wire"
 )
 
-//go:generate kratos t wire
+//go:generate punk t wire
 func InitApp() (*App, func(), error) {
 	panic(wire.Build(dao.Provider, service.Provider, grpc.New, NewApp))
 }

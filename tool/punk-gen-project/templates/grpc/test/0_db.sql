@@ -1,5 +1,5 @@
-create database kratos_demo;
-use kratos_demo;
+create database punk_demo;
+use punk_demo;
 
 CREATE TABLE `articles` (
   `id` int(11) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',

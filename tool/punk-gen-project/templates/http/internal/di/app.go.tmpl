@@ -10,7 +10,7 @@ import (
 	bm "github.com/CloudZou/punk/pkg/net/http/blademaster"
 )
 
-//go:generate kratos tool wire
+//go:generate punk tool wire
 type App struct {
 	svc *service.Service
 	http *bm.Engine

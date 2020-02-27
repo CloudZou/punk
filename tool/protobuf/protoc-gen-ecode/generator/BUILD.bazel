@@ -1,0 +1,25 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["generator.go"],
+    importpath = "github.com/CloudZou/punk/tool/protobuf/protoc-gen-ecode/generator",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//tool/protobuf/pkg/generator:go_default_library",
+        "//tool/protobuf/pkg/naming:go_default_library",
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/github.com/golang/protobuf/protoc-gen-go/descriptor:go_default_library",
+        "//vendor/github.com/golang/protobuf/protoc-gen-go/plugin:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["generator_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/github.com/golang/protobuf/protoc-gen-go/plugin:go_default_library",
+    ],
+)

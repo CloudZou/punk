@@ -1,0 +1,17 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "go_naming.go",
+        "naming.go",
+    ],
+    importpath = "github.com/CloudZou/punk/tool/protobuf/pkg/naming",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//tool/protobuf/pkg/utils:go_default_library",
+        "//vendor/github.com/golang/protobuf/protoc-gen-go/descriptor:go_default_library",
+        "//vendor/github.com/pkg/errors:go_default_library",
+        "//vendor/github.com/siddontang/go/ioutil2:go_default_library",
+    ],
+)

@@ -7,7 +7,7 @@ import (
 	"github.com/google/wire"
 )
 
-//go:generate kratos tool wire
-func newTestDao() (*dao, func(), error) {
-	panic(wire.Build(newDao, NewDB, NewRedis, NewMC))
+//go:generate punk tool wire
+func newTestDao() (*Dao, func(), error) {
+	panic(wire.Build(newDao, NewDB, NewRedisClient))
 }
