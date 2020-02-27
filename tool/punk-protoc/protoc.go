@@ -140,11 +140,11 @@ func latestKratos() (string, error) {
 		return "", err
 	}
 	for i := len(files) - 1; i >= 0; i-- {
-		if strings.HasPrefix(files[i].Name(), "kratos@") {
+		if strings.HasPrefix(files[i].Name(), "punk@") {
 			return path.Join(baseMod, files[i].Name(), "third_party"), nil
 		}
 	}
-	return "", errors.New("not found kratos package")
+	return "", errors.New("not found punk package")
 }
 
 func gopath() (gp string) {
