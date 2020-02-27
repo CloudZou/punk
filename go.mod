@@ -44,17 +44,20 @@ require (
 	github.com/prometheus/client_golang v1.1.0
 	github.com/robfig/cron/v3 v3.0.0 // indirect
 	github.com/shirou/gopsutil v2.19.11+incompatible
+	github.com/siddontang/go v0.0.0-20180604090527-bdc77568d726
 	github.com/sirupsen/logrus v1.4.2
 	github.com/stellar/go v0.0.0-20200203232630-a29b5ca2f46f // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/swaggo/gin-swagger v1.0.1-0.20190110070702-0c6fcfd3c7f3 // indirect
 	github.com/tealeg/xlsx v1.0.4-0.20180419195153-f36fa3be8893 // indirect
 	github.com/unknwon/com v1.0.1 // indirect
+	github.com/urfave/cli v1.22.1
 	github.com/urfave/cli/v2 v2.1.1
 	go.etcd.io/etcd v0.0.0-20190917205325-a14579fbfb1a
 	golang.org/x/image v0.0.0-20180628062038-cc896f830ced // indirect
 	golang.org/x/net v0.0.0-20191011234655-491137f69257
 	google.golang.org/appengine v1.6.3 // indirect
+	google.golang.org/genproto v0.0.0-20190425155659-357c62f0e4bb
 	google.golang.org/grpc v1.24.0
 	gopkg.in/go-playground/validator.v9 v9.29.1
 	gopkg.in/ini.v1 v1.52.0 // indirect

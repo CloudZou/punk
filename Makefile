@@ -8,11 +8,12 @@ build: gazelle
 	$(BAZEL) build //...
 
 .PHONY: build-tool
-build: gazelle
+build-tool: gazelle
 	$(BAZEL) build //tool/punk
 	$(BAZEL) build //tool/punk-gen-bts
 	$(BAZEL) build //tool/punk-gen-project
 	$(BAZEL) build //tool/punk-gen-redis
+	$(BAZEL) build //tool/punk-protoc
 #
 # .PHONY: build-all-platform-tool
 # build-all-platform-tool: gazelle
