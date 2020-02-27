@@ -20,7 +20,7 @@ require (
 	github.com/go-ini/ini v1.32.1-0.20180214101753-32e4be5f41bb // indirect
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/go-playground/universal-translator v0.17.0 // indirect
-	github.com/go-zookeeper/zk v1.0.1
+	github.com/go-zookeeper/zk v1.0.1 // indirect
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/gogo/protobuf v1.3.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
@@ -46,6 +46,7 @@ require (
 	github.com/shirou/gopsutil v2.19.11+incompatible
 	github.com/siddontang/go v0.0.0-20180604090527-bdc77568d726
 	github.com/sirupsen/logrus v1.4.2
+	github.com/smartystreets/goconvey v0.0.0-20190731233626-505e41936337
 	github.com/stellar/go v0.0.0-20200203232630-a29b5ca2f46f // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/swaggo/gin-swagger v1.0.1-0.20190110070702-0c6fcfd3c7f3 // indirect
@@ -53,7 +54,7 @@ require (
 	github.com/unknwon/com v1.0.1 // indirect
 	github.com/urfave/cli v1.22.1
 	github.com/urfave/cli/v2 v2.1.1
-	go.etcd.io/etcd v0.0.0-20190917205325-a14579fbfb1a
+	go.etcd.io/etcd v0.0.0-20190917205325-a14579fbfb1a // indirect
 	golang.org/x/image v0.0.0-20180628062038-cc896f830ced // indirect
 	golang.org/x/net v0.0.0-20191011234655-491137f69257
 	google.golang.org/appengine v1.6.3 // indirect
