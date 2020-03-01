@@ -418,7 +418,7 @@ func (c *Client) Configs() (confs []*Value, ok bool) {
 		m map[string]*Value
 	)
 	if m, ok = c.data.Load().(map[string]*Value); !ok {
-		return
+		returnc
 	}
 	for _, v := range m {
 		if v.CID == 0 {
