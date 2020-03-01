@@ -58,12 +58,6 @@ type data struct {
 	Md5     string `json:"md5"`
 }
 
-type Value struct {
-	CID    int64  `json:"cid"`
-	Name   string `json:"name"`
-	Config string `json:"config"`
-}
-
 // Namespace the key-value config object.
 type Namespace struct {
 	Name string            `json:"name"`
@@ -91,6 +85,7 @@ type config struct {
 // Client is config client.
 type Client struct {
 	ver       int64 // NOTE: for config v1
+	diff      *ver  // NOTE: for config v2
 	customize string
 	httpCli   *http.Client
 	data      atomic.Value
