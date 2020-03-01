@@ -180,23 +180,6 @@ func (c *Client) Toml() (cf string, ok bool) {
 	return
 }
 
-//Configs configs.
-func (c *Client) Configs() (confs []*Value, ok bool) {
-	var (
-		m map[string]*Value
-	)
-	if m, ok = c.data.Load().(map[string]*Value); !ok {
-		return
-	}
-	for _, v := range m {
-		if v.CID == 0 {
-			continue
-		}
-		confs = append(confs, v)
-	}
-	return
-}
-
 // Value return config value.
 func (c *Client) Value(key string) (cf string, ok bool) {
 	var (
