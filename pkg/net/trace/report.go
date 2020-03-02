@@ -20,7 +20,7 @@ const (
 
 // reporter trace reporter.
 type reporter interface {
-	WriteSpan(sp *Span) error
+	WriteSpan(sp *span) error
 	Close() error
 }
 
@@ -64,7 +64,7 @@ func (c *connReport) daemon() {
 	c.done <- struct{}{}
 }
 
-func (c *connReport) WriteSpan(sp *Span) error {
+func (c *connReport) WriteSpan(sp *span) error {
 	data, err := marshalSpan(sp, c.version)
 	if err != nil {
 		return err

@@ -20,8 +20,6 @@ func (n nooptracer) Extract(format interface{}, carrier interface{}) (Trace, err
 
 type noopspan struct{}
 
-func (n noopspan) TraceID() string { return "" }
-
 func (n noopspan) Fork(string, string) Trace {
 	return noopspan{}
 }

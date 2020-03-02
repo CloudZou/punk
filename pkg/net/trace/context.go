@@ -19,39 +19,39 @@ var (
 
 // SpanContext implements opentracing.SpanContext
 type spanContext struct {
-	// TraceID represents globally unique ID of the trace.
+	// traceID represents globally unique ID of the trace.
 	// Usually generated as a random number.
-	TraceID uint64
+	traceID uint64
 
-	// SpanID represents span ID that must be unique within its trace,
+	// spanID represents span ID that must be unique within its trace,
 	// but does not have to be globally unique.
-	SpanID uint64
+	spanID uint64
 
-	// ParentID refers to the ID of the parent span.
+	// parentID refers to the ID of the parent span.
 	// Should be 0 if the current span is a root span.
-	ParentID uint64
+	parentID uint64
 
-	// Flags is a bitmap containing such bits as 'sampled' and 'debug'.
-	Flags byte
+	// flags is a bitmap containing such bits as 'sampled' and 'debug'.
+	flags byte
 
-	// Probability
-	Probability float32
+	// probability
+	probability float32
 
-	// Level current level
-	Level int
+	// current level
+	level int
 }
 
 func (c spanContext) isSampled() bool {
-	return (c.Flags & flagSampled) == flagSampled
+	return (c.flags & flagSampled) == flagSampled
 }
 
 func (c spanContext) isDebug() bool {
-	return (c.Flags & flagDebug) == flagDebug
+	return (c.flags & flagDebug) == flagDebug
 }
 
 // IsValid check spanContext valid
 func (c spanContext) IsValid() bool {
-	return c.TraceID != 0 && c.SpanID != 0
+	return c.traceID != 0 && c.spanID != 0
 }
 
 // emptyContext emptyContext
@@ -69,10 +69,10 @@ var emptyContext = spanContext{}
 // sample-rate: s-{base16(BigEndian(float32))}
 func (c spanContext) String() string {
 	base := make([]string, 4)
-	base[0] = strconv.FormatUint(uint64(c.TraceID), 16)
-	base[1] = strconv.FormatUint(uint64(c.SpanID), 16)
-	base[2] = strconv.FormatUint(uint64(c.ParentID), 16)
-	base[3] = strconv.FormatUint(uint64(c.Flags), 16)
+	base[0] = strconv.FormatUint(uint64(c.traceID), 16)
+	base[1] = strconv.FormatUint(uint64(c.spanID), 16)
+	base[2] = strconv.FormatUint(uint64(c.parentID), 16)
+	base[3] = strconv.FormatUint(uint64(c.flags), 16)
 	return strings.Join(base, ":")
 }
 
@@ -101,10 +101,10 @@ func contextFromString(value string) (spanContext, error) {
 		return emptyContext, errInvalidTracerString
 	}
 	sctx := spanContext{
-		TraceID:  rets[0],
-		SpanID:   rets[1],
-		ParentID: rets[2],
-		Flags:    byte(rets[3]),
+		traceID:  rets[0],
+		spanID:   rets[1],
+		parentID: rets[2],
+		flags:    byte(rets[3]),
 	}
 	return sctx, nil
 }

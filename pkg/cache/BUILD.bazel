@@ -1,9 +1,22 @@
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["metrics.go"],
+    srcs = [
+        "cache.go",
+        "metrics.go",
+    ],
     importpath = "github.com/CloudZou/punk/pkg/cache",
     visibility = ["//visibility:public"],
-    deps = ["//pkg/stat/metric:go_default_library"],
+    deps = [
+        "//pkg/log:go_default_library",
+        "//pkg/stat/metric:go_default_library",
+        "//pkg/stat/prom:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["cache_test.go"],
+    embed = [":go_default_library"],
 )

@@ -2,6 +2,7 @@ package log
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"runtime"
 	"strconv"
@@ -15,7 +16,11 @@ import (
 
 func addExtraField(ctx context.Context, fields map[string]interface{}) {
 	if t, ok := trace.FromContext(ctx); ok {
-		fields[_tid] = t.TraceID()
+		if s, ok := t.(fmt.Stringer); ok {
+			fields[_tid] = s.String()
+		} else {
+			fields[_tid] = fmt.Sprintf("%s", t)
+		}
 	}
 	if caller := metadata.String(ctx, metadata.Caller); caller != "" {
 		fields[_caller] = caller

@@ -43,6 +43,8 @@ var (
 	Color string
 	// DiscoveryNodes is seed nodes.
 	DiscoveryNodes string
+
+	IP string
 )
 
 func init() {

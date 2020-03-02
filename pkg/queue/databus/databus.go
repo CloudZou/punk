@@ -5,20 +5,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/CloudZou/punk/pkg/conf/env"
-	"github.com/CloudZou/punk/pkg/log"
-	"github.com/CloudZou/punk/pkg/naming"
-	"github.com/CloudZou/punk/pkg/naming/discovery"
-	"github.com/CloudZou/punk/pkg/net/netutil"
-	"github.com/CloudZou/punk/pkg/net/trace"
-	"github.com/CloudZou/punk/pkg/stat/prom"
-	"github.com/gomodule/redigo/redis"
+	"io"
 	"math/rand"
 	"net/url"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/CloudZou/punk/pkg/cache/redis"
+	"github.com/CloudZou/punk/pkg/conf/env"
+	"github.com/CloudZou/punk/pkg/container/pool"
+	"github.com/CloudZou/punk/pkg/log"
+	"github.com/CloudZou/punk/pkg/naming"
+	"github.com/CloudZou/punk/pkg/naming/discovery"
+	"github.com/CloudZou/punk/pkg/net/netutil"
+	"github.com/CloudZou/punk/pkg/net/trace"
+	"github.com/CloudZou/punk/pkg/stat/prom"
 	xtime "github.com/CloudZou/punk/pkg/time"
 )
 
@@ -144,34 +146,33 @@ func New(c *Config) *Databus {
 	}
 	if c.Action == _actionPub || c.Action == _actionAll {
 		// new pool
-		d.p, _ = d.redisPool(c)
+		d.p = d.redisPool(c)
 		if d.dis != nil {
-			//TODO
-			//d.p.New = func(ctx context.Context) (io.Closer, error) {
-			//	return d.dialInstance()
-			//}
+			d.p.New = func(ctx context.Context) (io.Closer, error) {
+				return d.dialInstance()
+			}
 		}
 	}
 	return d
 }
 
-func (d *Databus) redisPool(c *Config) (redisConn *redis.Pool, err error) {
-	redisConn = &redis.Pool{
-		MaxIdle:   c.Idle,
-		MaxActive: c.Active,
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", c.Name)
-			if err != nil {
-				return nil, err
-			}
-			return c, err
-		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
+func (d *Databus) redisPool(c *Config) *redis.Pool {
+	config := &redis.Config{
+		Name:         c.Name,
+		Proto:        c.Proto,
+		Addr:         c.Addr,
+		Auth:         fmt.Sprintf(_authFormat, c.Key, c.Secret, c.Group, c.Topic, c.Action),
+		DialTimeout:  c.DialTimeout,
+		ReadTimeout:  c.ReadTimeout,
+		WriteTimeout: c.WriteTimeout,
 	}
-	return
+	config.Config = &pool.Config{
+		Active:      c.Active,
+		Idle:        c.Idle,
+		IdleTimeout: c.IdleTimeout,
+	}
+	stat := redis.DialStats(statfunc)
+	return redis.NewPool(config, stat)
 }
 
 func statfunc(cmd string, err *error) func() {
@@ -189,8 +190,8 @@ func (d *Databus) redisOptions() []redis.DialOption {
 	rdop := redis.DialReadTimeout(time.Duration(d.conf.ReadTimeout))
 	wrop := redis.DialWriteTimeout(time.Duration(d.conf.WriteTimeout))
 	auop := redis.DialPassword(fmt.Sprintf(_authFormat, d.conf.Key, d.conf.Secret, d.conf.Group, d.conf.Topic, d.conf.Action))
-	//stat := redis.DialStats(statfunc)
-	return []redis.DialOption{cnop, rdop, wrop, auop}
+	stat := redis.DialStats(statfunc)
+	return []redis.DialOption{cnop, rdop, wrop, auop, stat}
 }
 
 func (d *Databus) dial() (redis.Conn, error) {
@@ -231,11 +232,10 @@ func (d *Databus) dialInstance() (redis.Conn, error) {
 func (d *Databus) disc() {
 	if d.p != nil {
 		op := d.p
-		np, _ := d.redisPool(d.conf)
-		//TODO
-		//np.New = func(ctx context.Context) (io.Closer, error) {
-		//	return d.dialInstance()
-		//}
+		np := d.redisPool(d.conf)
+		np.New = func(ctx context.Context) (io.Closer, error) {
+			return d.dialInstance()
+		}
 		d.p = np
 		op.Close()
 		op = nil
@@ -344,7 +344,7 @@ func (d *Databus) Send(c context.Context, k string, v interface{}) (err error) {
 		log.Error("json.Marshal(%v) error(%v)", v, err)
 		return
 	}
-	conn := d.p.Get()
+	conn := d.p.Get(context.TODO())
 	if _, err = conn.Do(_cmdPub, k, b); err != nil {
 		log.Error("conn.Do(%s,%s,%s) error(%v)", _cmdPub, k, b, err)
 	}
