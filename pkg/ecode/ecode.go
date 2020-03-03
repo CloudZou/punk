@@ -55,6 +55,10 @@ func (e Code) Error() string {
 	return strconv.FormatInt(int64(e), 10)
 }
 
+// Equal for compatible.
+// Deprecated: please use ecode.EqualError.
+func (e Code) Equal(err error) bool { return EqualError(e, err) }
+
 // Code return error code
 func (e Code) Code() int { return int(e) }
 

@@ -47,6 +47,23 @@ var (
 	IP string
 )
 
+// app default value.
+const (
+	_httpPort  = "8000"
+	_gorpcPort = "8099"
+	_grpcPort  = "9000"
+)
+
+// app configraution.
+var (
+	// HTTPPort app listen http port.
+	HTTPPort string
+	// GORPCPort app listen gorpc port.
+	GORPCPort string
+	// GRPCPort app listen grpc port.
+	GRPCPort string
+)
+
 func init() {
 	var err error
 	Hostname = os.Getenv("HOSTNAME")
@@ -67,6 +84,11 @@ func addFlag(fs *flag.FlagSet) {
 	fs.StringVar(&DeployEnv, "deploy.env", defaultString("DEPLOY_ENV", _deployEnv), "deploy env. or use DEPLOY_ENV env variable, value: dev/fat1/uat/pre/prod etc.")
 	fs.StringVar(&Color, "deploy.color", os.Getenv("DEPLOY_COLOR"), "deploy.color is the identification of different experimental group.")
 	fs.StringVar(&DiscoveryNodes, "discovery.nodes", os.Getenv("DISCOVERY_NODES"), "discovery.nodes is seed nodes. value: 127.0.0.1:7171,127.0.0.2:7171 etc.")
+
+	// app
+	fs.StringVar(&HTTPPort, "http.port", defaultString("DISCOVERY_HTTP_PORT", _httpPort), "app listen http port, default: 8000")
+	fs.StringVar(&GORPCPort, "gorpc.port", defaultString("DISCOVERY_GORPC_PORT", _gorpcPort), "app listen gorpc port, default: 8099")
+	fs.StringVar(&GRPCPort, "grpc.port", defaultString("DISCOVERY_GRPC_PORT", _grpcPort), "app listen grpc port, default: 9000")
 }
 
 func defaultString(env, value string) string {

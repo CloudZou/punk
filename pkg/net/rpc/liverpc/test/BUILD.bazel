@@ -1,0 +1,21 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = ["client.go"],
+    importpath = "github.com/CloudZou/punk/pkg/net/rpc/liverpc/test",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["client_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/net/rpc/liverpc:go_default_library",
+        "//pkg/net/rpc/liverpc/testdata:go_default_library",
+        "//pkg/net/rpc/liverpc/testdata/v1:go_default_library",
+        "//pkg/net/rpc/liverpc/testdata/v2:go_default_library",
+        "//vendor/github.com/pkg/errors:go_default_library",
+    ],
+)

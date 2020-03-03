@@ -175,10 +175,10 @@ func New(c *Config) (d *Discovery) {
 		Dial:    xtime.Duration(3 * time.Second),
 		Timeout: xtime.Duration(40 * time.Second),
 		Breaker: &breaker.Config{
-			Window: 100,
-			//Sleep:   3,
-			Bucket: 10,
-			//Ratio:   0.5,
+			Window:  100,
+			Sleep:   3,
+			Bucket:  10,
+			Ratio:   0.5,
 			Request: 100,
 		},
 	}

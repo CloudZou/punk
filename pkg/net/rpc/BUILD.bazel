@@ -1,0 +1,51 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "balancer.go",
+        "client.go",
+        "client2.go",
+        "server.go",
+        "trace.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/net/rpc",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/conf/dsn:go_default_library",
+        "//pkg/conf/env:go_default_library",
+        "//pkg/ecode:go_default_library",
+        "//pkg/log:go_default_library",
+        "//pkg/naming:go_default_library",
+        "//pkg/naming/discovery:go_default_library",
+        "//pkg/net/metadata:go_default_library",
+        "//pkg/net/netutil/breaker:go_default_library",
+        "//pkg/net/rpc/context:go_default_library",
+        "//pkg/net/rpc/interceptor:go_default_library",
+        "//pkg/net/trace:go_default_library",
+        "//pkg/stat:go_default_library",
+        "//pkg/sync/errgroup:go_default_library",
+        "//pkg/time:go_default_library",
+        "//vendor/github.com/pkg/errors:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "breaker_test.go",
+        "client2_test.go",
+        "server_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/conf/env:go_default_library",
+        "//pkg/ecode:go_default_library",
+        "//pkg/log:go_default_library",
+        "//pkg/naming:go_default_library",
+        "//pkg/naming/discovery:go_default_library",
+        "//pkg/net/rpc/context:go_default_library",
+        "//pkg/time:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+)

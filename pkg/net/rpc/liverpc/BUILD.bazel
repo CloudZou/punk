@@ -1,0 +1,39 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "client.go",
+        "client_conn.go",
+        "liverpc.pb.go",
+        "option.go",
+        "protocol.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/net/rpc/liverpc",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//pkg/conf/env:go_default_library",
+        "//pkg/log:go_default_library",
+        "//pkg/naming:go_default_library",
+        "//pkg/naming/discovery:go_default_library",
+        "//pkg/net/metadata:go_default_library",
+        "//pkg/net/trace:go_default_library",
+        "//pkg/stat:go_default_library",
+        "//pkg/time:go_default_library",
+        "//vendor/github.com/gogo/protobuf/proto:go_default_library",
+        "//vendor/github.com/golang/protobuf/proto:go_default_library",
+        "//vendor/github.com/json-iterator/go:go_default_library",
+        "//vendor/github.com/pkg/errors:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = ["client_conn_test.go"],
+    embed = [":go_default_library"],
+    deps = [
+        "//pkg/conf/env:go_default_library",
+        "//pkg/net/metadata:go_default_library",
+        "//vendor/github.com/smartystreets/goconvey/convey:go_default_library",
+    ],
+)

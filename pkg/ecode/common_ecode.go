@@ -17,6 +17,10 @@ var (
 	ServiceUnavailable = add(-503) // 过载保护,服务暂不可用
 	Deadline           = add(-504) // 服务调用超时
 	LimitExceed        = add(-509) // 超出限制
+
+	Degrade     = add(-1200) // 被降级过滤的请求
+	RPCNoClient = add(-1201) // rpc服务的client都不可用
+	RPCNoAuth   = add(-1202) // rpc服务的client没有授权
 )
 
 var HttpStatusCodeMsgFlags = map[Code]string{
