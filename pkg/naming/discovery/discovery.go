@@ -102,7 +102,7 @@ type appInfo struct {
 
 func fixConfig(c *Config) {
 	if len(c.Nodes) == 0 {
-		c.Nodes = []string{"api.bilibili.co"}
+		c.Nodes = []string{"discovery.angrymiao.com"}
 	}
 	if env.Region != "" {
 		c.Region = env.Region
@@ -151,7 +151,7 @@ func Build(id string) naming.Resolver {
 func New(c *Config) (d *Discovery) {
 	if c == nil {
 		c = &Config{
-			Nodes:  []string{"discovery.bilibili.co", "api.bilibili.co"},
+			Nodes:  []string{"discovery.angrymiao.com"},
 			Key:    "discovery",
 			Secret: "discovery",
 		}
