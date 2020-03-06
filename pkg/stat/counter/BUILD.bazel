@@ -1,0 +1,22 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "counter.go",
+        "gauge.go",
+        "rolling.go",
+    ],
+    importpath = "github.com/CloudZou/punk/pkg/stat/counter",
+    visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "counter_test.go",
+        "rolling_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = ["//vendor/github.com/stretchr/testify/assert:go_default_library"],
+)
